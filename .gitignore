@@ -1,0 +1,6 @@
+.dockerignore/
+venv/
+./French Audio 2.wav/
+./test_api.py/
+
+
