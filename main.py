@@ -20,11 +20,9 @@ def recognize_speech_from_audio_file(audio_data, language):
             # print(f"Recognized Text: {text}")
             return text
     except sr.UnknownValueError:
-        return "Sorry, I could not understand the audio."
+        return {"error":"Sorry, I could not understand the audio."}
     except sr.RequestError:
-        return "Could not request results from Google Speech Recognition service."
-    except Exception as e:
-        return f"Error: {str(e)}"
+        return {"error":"Could not request results from Google Speech Recognition service."}
 
 
 def translate_textDP(text, src_language, dest_language="en"):
@@ -35,7 +33,6 @@ def translate_textDP(text, src_language, dest_language="en"):
 
 
 app = FastAPI()
-
 
 @app.post('/recognize-and-translate/')
 async def recognize_and_translate(
@@ -66,14 +63,22 @@ async def recognize_and_translate(
     }
 
     if language not in language_codes_STT or language not in language_codes_TTS:
-        raise HTTPException(status_code=400, detail="Unsupported language")
+        raise HTTPException(status_code=400, detail={"error":"Unsupported language"})
 
-    audio_data = await file.read()
+    if file.content_type != "audio/wav":
+        raise HTTPException(status_code=400, detail={"error":"Invalid file type. Only WAV files are accepted."})
 
-    # Recognize speech from the audio file
-    recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language])
+    try:
+        # Read the audio data from the uploaded file
+        audio_data = await file.read()
+
+        # Recognize speech from the audio file
+        recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"error":"Could not read file and recognize the text"})
+
     if recognized_text.startswith("Sorry") or recognized_text.startswith("Could not"):
-        raise HTTPException(status_code=500, detail=recognized_text)
+        raise HTTPException(status_code=500, detail={"error":recognized_text})
 
     translated_text = translate_textDP(recognized_text, language_codes_TTS[language], "en")
     # print("Translated Text", translated_text)
