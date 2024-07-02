@@ -62,17 +62,17 @@ async def recognize_and_translate(
         "Farsi": "fa"
     }
     if file is None:
-        raise HTTPException(status_code=400, detail={"error": "Missing file"})
+        raise HTTPException(status_code=400, detail="Missing File")
 
     if language is None:
-        raise HTTPException(status_code=400, detail={"error": "Missing language"})
+        raise HTTPException(status_code=400, detail="Missing language")
 
     if language not in language_codes_STT or language not in language_codes_TTS:
-        raise HTTPException(status_code=400, detail={"error":"Unsupported language"})
+        raise HTTPException(status_code=400, detail="Unsupported language")
 
     header = await file.read(12)
     if header[:4] != b'RIFF' or header[8:] != b'WAVE':
-        raise HTTPException(status_code=400, detail={"error": "Invalid file type. Only WAV files are accepted."})
+        raise HTTPException(status_code=400, detail="Invalid file type. Only WAV files are accepted.")
 
     # Reset file read pointer
     await file.seek(0)
@@ -84,10 +84,10 @@ async def recognize_and_translate(
         # Recognize speech from the audio file
         recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language])
     except Exception as e:
-        raise HTTPException(status_code=500, detail={"error":"Could not read file and recognize the text"})
+        raise HTTPException(status_code=500, detail="Could not read file and recognize the text")
 
     if recognized_text.startswith("Sorry") or recognized_text.startswith("Could not"):
-        raise HTTPException(status_code=500, detail={"error":recognized_text})
+        raise HTTPException(status_code=500, detail=recognized_text)
 
     translated_text = translate_textDP(recognized_text, language_codes_TTS[language], "en")
     # print("Translated Text", translated_text)
