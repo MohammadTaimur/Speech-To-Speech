@@ -65,8 +65,12 @@ async def recognize_and_translate(
     if language not in language_codes_STT or language not in language_codes_TTS:
         raise HTTPException(status_code=400, detail={"error":"Unsupported language"})
 
-    if file.content_type != "audio/wav":
-        raise HTTPException(status_code=400, detail={"error":"Invalid file type. Only WAV files are accepted."})
+    header = await file.read(12)
+    if header[:4] != b'RIFF' or header[8:] != b'WAVE':
+        raise HTTPException(status_code=400, detail={"error": "Invalid file type. Only WAV files are accepted."})
+
+    # Reset file read pointer
+    await file.seek(0)
 
     try:
         # Read the audio data from the uploaded file
