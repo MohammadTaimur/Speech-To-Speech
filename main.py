@@ -20,9 +20,9 @@ def recognize_speech_from_audio_file(audio_data, language):
             # print(f"Recognized Text: {text}")
             return text
     except sr.UnknownValueError:
-        return {"error":"Sorry, I could not understand the audio."}
+        return "Sorry, I could not understand the audio."
     except sr.RequestError:
-        return {"error":"Could not request results from Google Speech Recognition service."}
+        return "Could not request results from Google Speech Recognition service."
 
 
 def translate_textDP(text, src_language, dest_language="en"):
