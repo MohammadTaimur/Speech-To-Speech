@@ -36,8 +36,8 @@ app = FastAPI()
 
 @app.post('/recognize-and-translate/')
 async def recognize_and_translate(
-        file: UploadFile = File(...),
-        language: str = Form(...)
+        file: UploadFile = File(None),
+        language: str = Form(None)
 ):
     language_codes_STT = {
         "Arabic": "ar-SA",
@@ -61,6 +61,11 @@ async def recognize_and_translate(
         "French": "fr",
         "Farsi": "fa"
     }
+    if file is None:
+        raise HTTPException(status_code=400, detail={"error": "Missing file"})
+
+    if language is None:
+        raise HTTPException(status_code=400, detail={"error": "Missing language"})
 
     if language not in language_codes_STT or language not in language_codes_TTS:
         raise HTTPException(status_code=400, detail={"error":"Unsupported language"})
