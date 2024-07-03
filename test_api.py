@@ -2,7 +2,8 @@ import requests
 
 file_path = r'French Audio 2.wav'
 
-url = "http://localhost:8000/recognize-and-translate/"
+url = "https://speech-to-speech1-yxgswm4eqa-uc.a.run.app/recognize-and-translate/"
+# url = "http://127.0.0.1:8000/recognize-and-translate/"
 files = {'file': open(file_path, 'rb')}
 language = {'language': 'French'}
 

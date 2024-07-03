@@ -95,5 +95,6 @@ async def recognize_and_translate(
     response_object = {
         "translated_text": str(translated_text),
         "language_text": str(recognized_text)
+        "detail":""
     }
     return response_object
