@@ -25,7 +25,7 @@ def recognize_speech_from_audio_file(audio_data, language):
         return "Could not request results from Google Speech Recognition service."
 
 
-def translate_textDP(text, src_language, dest_language="en"):
+def translate_textDP(text, src_language, dest_language):
     translator = GoogleTranslator(source=src_language, target=dest_language)
     translation = translator.translate(text)
     # print(f"Translated Text: {translation}")
@@ -37,7 +37,8 @@ app = FastAPI()
 @app.post('/recognize-and-translate/')
 async def recognize_and_translate(
         file: UploadFile = File(None),
-        language: str = Form(None)
+        language_src: str = Form(None),
+        language_dst: str = Form(None)
 ):
     language_codes_STT = {
         "Arabic": "ar-SA",
@@ -48,7 +49,8 @@ async def recognize_and_translate(
         "Spanish": "es-ES",
         "German": "de-DE",
         "French": "fr-FR",
-        "Farsi": "fa-IR"
+        "Farsi": "fa-IR",
+        "English": "en-US"
     }
     language_codes_TTS = {
         "Arabic": "ar",
@@ -59,16 +61,23 @@ async def recognize_and_translate(
         "Spanish": "es",
         "German": "de",
         "French": "fr",
-        "Farsi": "fa"
+        "Farsi": "fa",
+        "English": "en"
     }
+
     if file is None:
         raise HTTPException(status_code=400, detail="Missing File")
 
-    if language is None:
-        raise HTTPException(status_code=400, detail="Missing language")
+    if language_src is None:
+        raise HTTPException(status_code=400, detail="Missing language_src")
+    if language_dst is None:
+        raise HTTPException(status_code=400, detail="Missing language_dst")
 
-    if language not in language_codes_STT or language not in language_codes_TTS:
-        raise HTTPException(status_code=400, detail="Unsupported language")
+    if language_src not in language_codes_STT or language_src not in language_codes_TTS:
+        raise HTTPException(status_code=400, detail="Unsupported language_src")
+
+    if language_dst not in language_codes_STT or language_dst not in language_codes_TTS:
+        raise HTTPException(status_code=400, detail="Unsupported language_dst")
 
     header = await file.read(12)
     if header[:4] != b'RIFF' or header[8:] != b'WAVE':
@@ -82,19 +91,18 @@ async def recognize_and_translate(
         audio_data = await file.read()
 
         # Recognize speech from the audio file
-        recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language])
+        recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language_src])
     except Exception as e:
         raise HTTPException(status_code=500, detail="Could not read file and recognize the text")
 
     if recognized_text.startswith("Sorry") or recognized_text.startswith("Could not"):
         raise HTTPException(status_code=500, detail=recognized_text)
 
-    translated_text = translate_textDP(recognized_text, language_codes_TTS[language], "en")
+    translated_text = translate_textDP(recognized_text, language_codes_TTS[language_src], language_codes_TTS[language_dst])
     # print("Translated Text", translated_text)
 
     response_object = {
         "translated_text": str(translated_text),
-        "language_text": str(recognized_text)
-        "detail":""
+        "language_text": str(recognized_text),
     }
     return response_object
