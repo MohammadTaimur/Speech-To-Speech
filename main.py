@@ -1,5 +1,6 @@
 # pip install fastapi uvicorn requests
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from typing import Optional
 
 # pip install deep_translator
 # pip install SpeechRecognition
@@ -36,7 +37,8 @@ app = FastAPI()
 
 @app.post('/recognize-and-translate/')
 async def recognize_and_translate(
-        file: UploadFile = File(None),
+        file: Optional[UploadFile] = File(None),
+        text: Optional[str] = Form(None),
         language_src: str = Form(None),
         language_dst: str = Form(None)
 ):
@@ -65,8 +67,10 @@ async def recognize_and_translate(
         "English": "en"
     }
 
-    if file is None:
-        raise HTTPException(status_code=400, detail="Missing File")
+    if file is None and text is None:
+        raise HTTPException(status_code=400, detail="Missing File or Missing Text")
+    if file and text:
+        raise HTTPException(status_code=400, detail="Provide either 'file' or 'text', not both.")
 
     if language_src is None:
         raise HTTPException(status_code=400, detail="Missing language_src")
@@ -79,30 +83,35 @@ async def recognize_and_translate(
     if language_dst not in language_codes_STT or language_dst not in language_codes_TTS:
         raise HTTPException(status_code=400, detail="Unsupported language_dst")
 
-    header = await file.read(12)
-    if header[:4] != b'RIFF' or header[8:] != b'WAVE':
-        raise HTTPException(status_code=400, detail="Invalid file type. Only WAV files are accepted.")
+    if file:
+        header = await file.read(12)
+        if header[:4] != b'RIFF' or header[8:] != b'WAVE':
+            raise HTTPException(status_code=400, detail="Invalid file type. Only WAV files are accepted.")
 
-    # Reset file read pointer
-    await file.seek(0)
+        # Reset file read pointer
+        await file.seek(0)
 
-    try:
-        # Read the audio data from the uploaded file
-        audio_data = await file.read()
+        try:
+            # Read the audio data from the uploaded file
+            audio_data = await file.read()
 
-        # Recognize speech from the audio file
-        recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language_src])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Could not read file and recognize the text")
+            # Recognize speech from the audio file
+            recognized_text = recognize_speech_from_audio_file(audio_data, language_codes_STT[language_src])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Could not read file and recognize the text")
 
-    if recognized_text.startswith("Sorry") or recognized_text.startswith("Could not"):
-        raise HTTPException(status_code=500, detail=recognized_text)
+        if recognized_text.startswith("Sorry") or recognized_text.startswith("Could not"):
+            raise HTTPException(status_code=500, detail=recognized_text)
 
-    translated_text = translate_textDP(recognized_text, language_codes_TTS[language_src], language_codes_TTS[language_dst])
-    # print("Translated Text", translated_text)
-
-    response_object = {
-        "translated_text": str(translated_text),
-        "language_text": str(recognized_text),
-    }
+        translated_text = translate_textDP(recognized_text, language_codes_TTS[language_src], language_codes_TTS[language_dst])
+        response_object = {
+            "translated_text": str(translated_text),
+            "language_text": str(recognized_text),
+        }
+        # print("Translated Text", translated_text)
+    if text:
+        translated_text = translate_textDP(text, language_codes_TTS[language_src], language_codes_TTS[language_dst])
+        response_object = {
+            "translated_text": str(translated_text),
+        }
     return response_object
